@@ -23,7 +23,7 @@ func Sign(c Claims, key string) string {
 	b, _ := json.Marshal(c)
 	p := base64.RawURLEncoding.EncodeToString(b)
 	h := hmac.New(sha256.New, []byte(key))
-	h.Write([]byte(p))
+	_, _ = h.Write([]byte(p)) // hash.Hash.Write never returns an error.
 	return p + "." + base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 }
 func Verify(s, key string, now time.Time) (Claims, error) {
@@ -41,7 +41,7 @@ func Verify(s, key string, now time.Time) (Claims, error) {
 		return c, bad
 	}
 	h := hmac.New(sha256.New, []byte(key))
-	h.Write([]byte(p[0]))
+	_, _ = h.Write([]byte(p[0])) // hash.Hash.Write never returns an error.
 	if !hmac.Equal(sig, h.Sum(nil)) {
 		return c, bad
 	}

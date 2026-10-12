@@ -636,7 +636,7 @@ func (s *UpdateService) getFromCache(ctx context.Context) (*UpdateInfo, error) {
 		return nil, err
 	}
 
-	if cached.ReleaseRepo != s.releaseRepo && !(cached.ReleaseRepo == "" && s.releaseRepo == githubRepo) {
+	if cached.ReleaseRepo != s.releaseRepo && (cached.ReleaseRepo != "" || s.releaseRepo != githubRepo) {
 		return nil, fmt.Errorf("update cache source mismatch")
 	}
 	if time.Now().Unix()-cached.Timestamp > updateCacheTTL {

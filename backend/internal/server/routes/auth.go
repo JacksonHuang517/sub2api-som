@@ -238,6 +238,10 @@ func RegisterAuthRoutes(
 		)
 	}
 
+	// Dedicated, default-disabled, allowlisted service credential; never admin API key.
+	v1.GET("/integrations/feishu/balance/:id", h.Auth.FeishuBalance)
+	v1.GET("/integrations/feishu/subscriptions/:id", h.Subscription.FeishuSubscriptions(h.Auth))
+
 	// 公开设置（无需认证）：每次请求都会查询 DB，按客户端 IP 兜底限流，
 	// 防止匿名高频刷接口打爆数据库（反代内部地址会被自动跳过，不会误伤）。
 	settings := v1.Group("/settings")
@@ -255,6 +259,7 @@ func RegisterAuthRoutes(
 	authenticated.Use(panelRateLimiter.Global())
 	{
 		authenticated.GET("/auth/me", h.Auth.GetCurrentUser)
+		authenticated.POST("/auth/feishu-session", h.Auth.FeishuSessionProof)
 		// 撤销所有会话（需要认证）
 		authenticated.POST("/auth/revoke-all-sessions", h.Auth.RevokeAllSessions)
 		authenticated.POST("/auth/oauth/bind-token", h.Auth.PrepareOAuthBindAccessTokenCookie)

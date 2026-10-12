@@ -1,0 +1,52 @@
+/* SOM AI HUB · same components and layout, neutral reference palette. */
+:root {
+  --som-canvas: #f5f5f7;
+  --som-surface: #fff;
+  --som-raised: #ebebef;
+  --som-border: #e5e5ea;
+  --som-ink: #1d1d1f;
+  --som-muted: #6e6e73;
+  --som-blue: #007aff;
+  --som-orange: #ff6b35;
+}
+.dark {
+  --som-canvas: #0e0e10;
+  --som-surface: #1c1c1e;
+  --som-raised: #2c2c2e;
+  --som-border: #333336;
+  --som-ink: #f5f5f7;
+  --som-muted: #a1a1a6;
+  --som-blue: #0a84ff;
+}
+body { background: var(--som-canvas); color: var(--som-ink); }
+.bg-mesh-gradient { background-image: none; }
+.glass, .dark .glass { background: var(--som-surface); backdrop-filter: none; border-color: var(--som-border); }
+.card, .dark .card { background: var(--som-surface); border-color: var(--som-border); border-radius: 18px; box-shadow: 0 1px 2px #00000008; }
+.dark .card { box-shadow: none; }
+.sidebar, .dark .sidebar { background: var(--som-surface); border-color: var(--som-border); }
+.sidebar-header { padding-inline: 20px; gap: 10px; }
+.sidebar-brand-title { font-size: 16px; letter-spacing: -.025em; }
+.sidebar-logo { box-shadow: none; border-radius: 0; }
+.sidebar-link { color: var(--som-muted); border-radius: 11px; }
+.sidebar-link-active, .dark .sidebar-link-active,
+.sidebar-link-active:hover, .dark .sidebar-link-active:hover {
+  position: relative; background: var(--som-raised); color: var(--som-ink);
+}
+.sidebar-link-active::before {
+  content: ''; position: absolute; left: 0; top: 12px; bottom: 12px;
+  width: 3px; border-radius: 9px; background: linear-gradient(#ff6b35, #4285f4);
+}
+.sidebar-link-active > svg { color: var(--som-blue); }
+.btn-primary, .dark .btn-primary {
+  background: var(--som-blue); color: #fff; box-shadow: none;
+}
+.btn-primary:hover { filter: brightness(1.08); box-shadow: none; }
+.glass .bg-gradient-to-br { background-image: linear-gradient(135deg, #ff6b35, #4285f4); border-radius: 50%; }
+
+/* The dashboard remains legible on narrow displays without changing its desktop structure. */
+@media (max-width: 480px) {
+  .som-dashboard .grid.grid-cols-2 { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card, .sidebar, .sidebar-link, .btn { transition: none; }
+}

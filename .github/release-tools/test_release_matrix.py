@@ -86,6 +86,11 @@ class ReleaseMatrixTest(unittest.TestCase):
                 else:
                     self.assertEqual(data['checksum']['extra_files'], data['release']['extra_files'])
 
+    def test_som_revisions_are_stable_releases(self):
+        with patch.dict(os.environ, {'RELEASE_VERSION': '0.2.15-som.2'}):
+            release.generate_config(argparse.Namespace(mode='publish', simple=False, output='som.yaml'))
+        self.assertIs(yaml.safe_load(Path('som.yaml').read_text())['release']['prerelease'], False)
+
     def test_collect_and_verify_hash_and_source_binding(self):
         args = self.fixture_artifacts()
         release.verify(args)

@@ -1,0 +1,83 @@
+name: SOM upstream sync
+
+on:
+  schedule:
+    - cron: '17 2 * * *'
+  workflow_dispatch:
+    inputs:
+      create_pr:
+        description: 'Create a review PR after validation (requires repository opt-in and Actions PR permission)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: som-upstream-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    if: ${{ vars.SOM_SYNC_ENABLED == 'true' && vars.SOM_CUSTOM_BRANCH == 'som-custom' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    env:
+      SOM_CUSTOM_BRANCH: ${{ vars.SOM_CUSTOM_BRANCH }}
+      SOM_UPSTREAM_REPO: ${{ vars.SOM_UPSTREAM_REPO || 'Wei-Shaw/sub2api' }}
+      SOM_UPSTREAM_BRANCH: ${{ vars.SOM_UPSTREAM_BRANCH }}
+      SOM_AUTO_RELEASE: ${{ vars.SOM_AUTO_RELEASE || 'false' }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: som-custom
+          fetch-depth: 0
+      - name: Preserve trusted merge tooling
+        run: cp .github/release-tools/som_sync.py "$RUNNER_TEMP/som_sync.py"
+      - name: Prepare merge (conflicts stop before any push)
+        id: merge
+        env:
+          SOM_SYNC_PLAN: ${{ runner.temp }}/som-sync-plan.json
+          GH_TOKEN: ${{ github.token }}
+        run: python3 "$RUNNER_TEMP/som_sync.py" merge
+      - uses: actions/setup-go@v6
+        if: steps.merge.outputs.has_changes == 'true'
+        with:
+          go-version-file: backend/go.mod
+      - name: Feishu sidecar tests
+        if: steps.merge.outputs.has_changes == 'true'
+        working-directory: integrations/feishu
+        run: go test ./...
+      - name: Backend Feishu and updater tests
+        if: steps.merge.outputs.has_changes == 'true'
+        working-directory: backend
+        run: |
+          go test -tags=unit ./internal/pkg/feishubridge ./internal/handler ./internal/handler/admin ./internal/service ./internal/repository -run 'Test(Feishu|SystemHandler|UpdateService|CompareVersionsSOM|GitHubRelease)' -count=1
+      - uses: pnpm/action-setup@v6
+        if: steps.merge.outputs.has_changes == 'true'
+        with:
+          version: 9
+      - uses: actions/setup-node@v6
+        if: steps.merge.outputs.has_changes == 'true'
+        with:
+          node-version: '20'
+      - name: Frontend verification and embedded build
+        if: steps.merge.outputs.has_changes == 'true'
+        run: |
+          pnpm --dir frontend install --frozen-lockfile
+          pnpm --dir frontend run typecheck
+          make test-frontend-critical
+          pnpm --dir frontend exec vitest run src/components/user/profile/__tests__/ProfileFeishuCard.spec.ts src/api/__tests__/admin.system.rollback.spec.ts
+          pnpm --dir frontend run build
+          python3 .github/release-tools/merge_frontend_compat.py
+          python3 .github/release-tools/som_embed_gate.py
+          go build -C backend -tags=embed -ldflags="-X main.BuildType=release" -o "$RUNNER_TEMP/sub2api-som-sync" ./cmd/server
+      - name: Publish configured release or review PR after successful verification
+        if: ${{ steps.merge.outputs.has_changes == 'true' && (github.event_name == 'schedule' || inputs.create_pr == true || env.SOM_AUTO_RELEASE == 'true') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOM_SYNC_PLAN: ${{ runner.temp }}/som-sync-plan.json
+        run: python3 "$RUNNER_TEMP/som_sync.py" publish

@@ -1,0 +1,7 @@
+# REVIEW ONLY: merge into existing HTTPS site before catch-all.
+# DO NOT blindly reload: assess existing stream handlers and active WebSockets.
+# Disable query access logging for this route to protect OAuth codes/state.
+handle /integrations/feishu/api/* {
+    log_skip
+    reverse_proxy 127.0.0.1:8390
+}

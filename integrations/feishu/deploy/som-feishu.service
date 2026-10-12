@@ -1,0 +1,34 @@
+[Unit]
+Description=SOM Feishu identity and wallet reminders
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=som-feishu
+Group=som-feishu
+ExecStart=/opt/som-feishu/som-feishu -mode production
+EnvironmentFile=/etc/som-feishu/environment
+Environment=FEISHU_MODE=production
+Environment=FEISHU_DB=/var/lib/som-feishu/feishu.db
+StateDirectory=som-feishu
+StateDirectoryMode=0700
+UMask=0077
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=20
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/som-feishu
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+MemoryMax=192M
+CPUQuota=25%
+TasksMax=64
+LimitNOFILE=512
+LogRateLimitIntervalSec=30s
+LogRateLimitBurst=50
+
+[Install]
+WantedBy=multi-user.target

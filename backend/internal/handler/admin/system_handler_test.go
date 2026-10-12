@@ -36,6 +36,15 @@ type systemHandlerUpdateServiceStub struct {
 	rollbackVersionsCall  int
 }
 
+func TestSystemHandlerGetVersionRejectsInvalidUpdateSource(t *testing.T) {
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/admin/system/version", nil)
+	h := NewSystemHandler(&systemHandlerUpdateServiceStub{checkErr: errors.New("invalid update source")}, nil)
+	h.GetVersion(c)
+	require.Equal(t, http.StatusServiceUnavailable, w.Code)
+}
+
 func (s *systemHandlerUpdateServiceStub) CheckUpdate(_ context.Context, force bool) (*service.UpdateInfo, error) {
 	s.checkForces = append(s.checkForces, force)
 	return s.updateInfo, s.checkErr

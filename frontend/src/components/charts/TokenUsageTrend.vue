@@ -19,7 +19,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useMutationObserver } from '@vueuse/core'
 import { useI18n } from 'vue-i18n'
 import {
   Chart as ChartJS,
@@ -54,17 +55,18 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
-const isDarkMode = computed(() => {
-  return document.documentElement.classList.contains('dark')
-})
+const isDarkMode = ref(document.documentElement.classList.contains('dark'))
+useMutationObserver(document.documentElement, () => {
+  isDarkMode.value = document.documentElement.classList.contains('dark')
+}, { attributes: true, attributeFilter: ['class'] })
 
 const chartColors = computed(() => ({
-  text: isDarkMode.value ? '#e5e7eb' : '#374151',
-  grid: isDarkMode.value ? '#374151' : '#e5e7eb',
-  input: '#3b82f6',
-  output: '#10b981',
+  text: isDarkMode.value ? '#e8e8ed' : '#3a3a3c',
+  grid: isDarkMode.value ? '#2c2c2e' : '#ebebef',
+  input: '#4285f4',
+  output: '#ff6b35',
   cacheCreation: '#f59e0b',
-  cacheRead: '#06b6d4',
+  cacheRead: '#a1a1a6',
   cacheHitRate: '#8b5cf6'
 }))
 

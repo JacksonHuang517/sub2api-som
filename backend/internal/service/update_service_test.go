@@ -5,6 +5,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -31,13 +32,17 @@ type updateServiceGitHubClientStub struct {
 	release        *GitHubRelease
 	recentReleases []*GitHubRelease
 	recentErr      error
+	latestRepo     string
+	recentRepo     string
 }
 
-func (s *updateServiceGitHubClientStub) FetchLatestRelease(context.Context, string) (*GitHubRelease, error) {
+func (s *updateServiceGitHubClientStub) FetchLatestRelease(_ context.Context, repo string) (*GitHubRelease, error) {
+	s.latestRepo = repo
 	return s.release, nil
 }
 
-func (s *updateServiceGitHubClientStub) FetchRecentReleases(context.Context, string, int) ([]*GitHubRelease, error) {
+func (s *updateServiceGitHubClientStub) FetchRecentReleases(_ context.Context, repo string, _ int) ([]*GitHubRelease, error) {
+	s.recentRepo = repo
 	return s.recentReleases, s.recentErr
 }
 
@@ -184,4 +189,73 @@ func TestUpdateServiceRollbackToVersionAcceptsVPrefix(t *testing.T) {
 	require.Error(t, err)
 	require.NotErrorIs(t, err, ErrRollbackVersionNotAllowed)
 	require.Contains(t, err.Error(), "no compatible release found")
+}
+
+func TestUpdateServiceCustomSourceAndCacheIsolation(t *testing.T) {
+	t.Setenv("UPDATE_RELEASE_REPO", "som-owner/som-api")
+	client := &updateServiceGitHubClientStub{release: &GitHubRelease{TagName: "v0.2.15-som.2"}}
+	cache := &updateServiceCacheStub{}
+	svc := NewUpdateService(cache, client, "0.2.15-som.1", "release")
+	info, err := svc.CheckUpdate(context.Background(), true)
+	require.NoError(t, err)
+	require.True(t, info.HasUpdate)
+	require.Equal(t, "som-owner/som-api", info.ReleaseRepo)
+	require.Equal(t, info.ReleaseRepo, client.latestRepo)
+	_, err = svc.ListRollbackVersions(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, info.ReleaseRepo, client.recentRepo)
+	t.Setenv("UPDATE_RELEASE_REPO", "another/repo")
+	other := NewUpdateService(cache, client, "0.2.15", "release")
+	_, err = other.getFromCache(context.Background())
+	require.ErrorContains(t, err, "source mismatch")
+}
+
+func TestUpdateServiceInvalidSourceDoesNotFetch(t *testing.T) {
+	for _, repo := range []string{"https://github.com/a/b", "a/b/c", "../repo", "owner/repo?x=1", "owner/repo#fragment"} {
+		t.Run(repo, func(t *testing.T) {
+			t.Setenv("UPDATE_RELEASE_REPO", repo)
+			client := &updateServiceGitHubClientStub{}
+			svc := NewUpdateService(&updateServiceCacheStub{}, client, "0.2.15", "release")
+			_, err := svc.CheckUpdate(context.Background(), true)
+			require.ErrorContains(t, err, "invalid UPDATE_RELEASE_REPO")
+			_, err = svc.ListRollbackVersions(context.Background())
+			require.Error(t, err)
+			require.Empty(t, client.latestRepo)
+			require.Empty(t, client.recentRepo)
+		})
+	}
+}
+
+func TestUpdateServiceCustomAssetsRequireExactArchiveAndChecksum(t *testing.T) {
+	t.Setenv("UPDATE_RELEASE_REPO", "som-owner/som-api")
+	svc := NewUpdateService(&updateServiceCacheStub{}, &updateServiceGitHubClientStub{}, "0.2.15", "release")
+	expected := "sub2api_0.2.16-som.1_" + svc.getArchiveName() + ".tar.gz"
+	for _, name := range []string{"other_" + expected, expected + ".zip", "sub2api_0.2.17_" + svc.getArchiveName() + ".tar.gz"} {
+		err := svc.applyReleaseAssets(context.Background(), []Asset{{Name: name}}, "0.2.16-som.1")
+		require.ErrorContains(t, err, "no compatible release")
+	}
+	err := svc.applyReleaseAssets(context.Background(), []Asset{{Name: expected, DownloadURL: "https://github.com/som-owner/som-api/releases/download/v0.2.16-som.1/" + expected}}, "0.2.16-som.1")
+	require.ErrorContains(t, err, "requires checksums.txt")
+}
+
+func TestCompareVersionsSOMRevisions(t *testing.T) {
+	for _, pair := range [][2]string{{"0.2.15", "0.2.15-som.1"}, {"0.2.15-som.2", "0.2.15-som.10"}, {"v0.2.15-som.10", "0.2.16-som.1"}} {
+		require.Equal(t, -1, compareVersions(pair[0], pair[1]))
+		require.Equal(t, 1, compareVersions(pair[1], pair[0]))
+	}
+	require.Zero(t, compareVersions("0.2.15-rc.1", "0.2.15"))
+	require.Zero(t, compareVersions("0.2.15-som.invalid", "0.2.15"))
+}
+
+func TestUpdateServiceLegacyCacheOnlyAcceptedForUpstream(t *testing.T) {
+	t.Setenv("UPDATE_RELEASE_REPO", "")
+	cache := &updateServiceCacheStub{data: fmt.Sprintf(`{"latest":"0.2.16","timestamp":%d}`, time.Now().Unix())}
+	upstream := NewUpdateService(cache, &updateServiceGitHubClientStub{}, "0.2.15", "release")
+	info, err := upstream.getFromCache(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, githubRepo, info.ReleaseRepo)
+	t.Setenv("UPDATE_RELEASE_REPO", "som-owner/som-api")
+	custom := NewUpdateService(cache, &updateServiceGitHubClientStub{}, "0.2.15", "release")
+	_, err = custom.getFromCache(context.Background())
+	require.ErrorContains(t, err, "source mismatch")
 }

@@ -651,7 +651,7 @@ import {
 import { useClipboard } from '@/composables/useClipboard'
 import Icon from '@/components/icons/Icon.vue'
 
-const GITHUB_REPO = 'Wei-Shaw/sub2api'
+const releaseRepo = computed(() => appStore.releaseRepo || 'Wei-Shaw/sub2api')
 // Docker Hub image published by CI (tags carry no "v" prefix, e.g. weishaw/sub2api:0.1.146)
 const DOCKER_IMAGE = 'weishaw/sub2api'
 
@@ -710,11 +710,17 @@ const manualTabs = computed(() => [
 const scriptRollbackCommand = computed(() => {
   if (!selectedRollbackVersion.value) return ''
   const tag = `v${selectedRollbackVersion.value}`
-  return `curl -sSL https://raw.githubusercontent.com/${GITHUB_REPO}/${tag}/deploy/install.sh | sudo bash -s -- rollback ${tag}`
+  if (releaseRepo.value !== 'Wei-Shaw/sub2api') {
+    return `# SOM 定制版本请使用上方版本回退按钮，或由管理员按发布记录恢复。\n# 发布记录：https://github.com/${releaseRepo.value}/releases/tag/${tag}`
+  }
+  return `curl -sSL https://raw.githubusercontent.com/${releaseRepo.value}/${tag}/deploy/install.sh | sudo bash -s -- rollback ${tag}`
 })
 
 const dockerRollbackCommand = computed(() => {
   if (!selectedRollbackVersion.value) return ''
+  if (releaseRepo.value !== 'Wei-Shaw/sub2api') {
+    return '# 当前使用 SOM 定制发布源；请使用该仓库提供的镜像及回退说明。'
+  }
   return [
     `# ${t('version.dockerEditCompose')}`,
     `image: ${DOCKER_IMAGE}:${selectedRollbackVersion.value}`,

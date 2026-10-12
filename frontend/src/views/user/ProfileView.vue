@@ -33,6 +33,7 @@
       </div>
 
       <ProfilePasswordForm />
+      <ProfileFeishuCard />
 
       <ProfileBalanceNotifyCard
         v-if="user && balanceLowNotifyEnabled"
@@ -56,6 +57,7 @@ import { Icon } from '@/components/icons'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ProfileBalanceNotifyCard from '@/components/user/profile/ProfileBalanceNotifyCard.vue'
 import ProfileInfoCard from '@/components/user/profile/ProfileInfoCard.vue'
+import ProfileFeishuCard from '@/components/user/profile/ProfileFeishuCard.vue'
 import ProfilePasswordForm from '@/components/user/profile/ProfilePasswordForm.vue'
 import ProfileTotpCard from '@/components/user/profile/ProfileTotpCard.vue'
 import ProfilePasskeyCard from '@/components/user/profile/ProfilePasskeyCard.vue'

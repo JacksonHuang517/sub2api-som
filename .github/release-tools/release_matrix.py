@@ -78,6 +78,10 @@ def plan(args):
 
 def generate_config(args):
     data = config(args.simple if args.mode == 'publish' else False)
+    # SOM revisions are stable custom builds, not upstream prereleases. The
+    # built-in updater uses releases/latest, which excludes prereleases.
+    if re.fullmatch(r'\d+\.\d+\.\d+-som\.\d+', os.environ.get('RELEASE_VERSION', '')):
+        data.setdefault('release', {})['prerelease'] = False
     data['snapshot'] = {'version_template': '{{ .Env.RELEASE_VERSION }}'}
     data['dockers'] = []
     data['docker_manifests'] = []

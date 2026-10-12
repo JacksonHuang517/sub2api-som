@@ -9,21 +9,19 @@
     <!-- Logo/Brand -->
     <div class="sidebar-header" :class="{ 'sidebar-header-collapsed': sidebarCollapsed }">
       <!-- Custom Logo or Default Logo -->
-      <router-link
-        :to="homePath"
+      <a
+        href="/home"
         class="sidebar-logo flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl shadow-glow transition-opacity hover:opacity-80"
-        @click="handleMenuItemClick(homePath)"
       >
         <img v-if="settingsLoaded" :src="siteLogo || '/logo.svg'" alt="Logo" class="h-full w-full object-contain" />
-      </router-link>
+      </a>
       <div class="sidebar-brand" :class="{ 'sidebar-brand-collapsed': sidebarCollapsed }" :aria-hidden="sidebarCollapsed ? 'true' : 'false'">
-        <router-link
-          :to="homePath"
+        <a
+          href="/home"
           class="sidebar-brand-title text-lg font-bold text-gray-900 transition-colors hover:text-primary-600 dark:text-white dark:hover:text-primary-400"
-          @click="handleMenuItemClick(homePath)"
         >
           {{ siteName }}
-        </router-link>
+        </a>
         <!-- Version Badge -->
         <VersionBadge :version="siteVersion" />
       </div>
@@ -252,7 +250,6 @@ const isAdmin = computed(() => authStore.isAdmin)
 const sidebarNavRef = ref<HTMLElement | null>(null)
 const isDark = ref(document.documentElement.classList.contains('dark'))
 
-const homePath = computed(() => (isAdmin.value ? '/admin/dashboard' : '/dashboard'))
 
 // Per-group expand/collapse overrides. A group with no entry follows the
 // automatic behavior (expanded while the active route is one of its children);

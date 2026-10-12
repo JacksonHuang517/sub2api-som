@@ -12,6 +12,7 @@ export interface ReleaseInfo {
 }
 
 export interface VersionInfo {
+  release_repo?: string
   current_version: string
   latest_version: string
   has_update: boolean

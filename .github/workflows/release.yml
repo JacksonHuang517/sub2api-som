@@ -97,8 +97,27 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
         working-directory: frontend
+      - uses: actions/setup-go@v6
+        if: ${{ vars.SOM_CUSTOM_BRANCH == 'som-custom' }}
+        with:
+          go-version-file: backend/go.mod
+      - name: SOM customization release gate
+        if: ${{ vars.SOM_CUSTOM_BRANCH == 'som-custom' }}
+        run: |
+          test -f integrations/feishu/go.mod
+          go test -C integrations/feishu -race ./...
+          go vet -C integrations/feishu ./...
+          go test -C backend -tags=unit ./internal/handler ./internal/handler/admin ./internal/service ./internal/repository -run 'Test(Feishu|SystemHandler|UpdateService|CompareVersionsSOM|GitHubRelease)' -count=1
+          pnpm --dir frontend run typecheck
+          make test-frontend-critical
+          pnpm --dir frontend exec vitest run src/components/user/profile/__tests__/ProfileFeishuCard.spec.ts src/api/__tests__/admin.system.rollback.spec.ts
       - run: pnpm run build
         working-directory: frontend
+      - name: Verify active SOM and Feishu frontend
+        if: ${{ vars.SOM_CUSTOM_BRANCH == 'som-custom' }}
+        run: |
+          python3 .github/release-tools/merge_frontend_compat.py
+          python3 .github/release-tools/som_embed_gate.py
       - uses: actions/upload-artifact@v7
         with:
           name: frontend-dist

@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 : "${RELEASE_VERSION:?}" "${RELEASE_SHA:?}" "${GITHUB_REPOSITORY:?}" "${RUNNER_TEMP:?}"
-owner=${GITHUB_REPOSITORY%%/*}
-owner_lower=$(printf '%s' "$owner" | tr '[:upper:]' '[:lower:]')
-registries=("ghcr.io/$owner_lower/sub2api")
+repository_lower=$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+registries=("ghcr.io/$repository_lower")
 if [[ ${SIMPLE_RELEASE:-false} != true && ${DOCKERHUB_USERNAME:-skip} != skip ]]; then
   registries+=("${DOCKERHUB_USERNAME}/sub2api")
 fi

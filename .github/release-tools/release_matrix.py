@@ -82,6 +82,13 @@ def generate_config(args):
     # built-in updater uses releases/latest, which excludes prereleases.
     if re.fullmatch(r'\d+\.\d+\.\d+-som\.\d+', os.environ.get('RELEASE_VERSION', '')):
         data.setdefault('release', {})['prerelease'] = False
+        data['release']['footer'] = '''
+## SOM 定制版本
+在已接入 SOM 更新通道的实例中，点击版本号 → 更新版本。
+发行包更新核心；独立飞书侧车与绑定数据库需保留，侧车单独升级。
+手动安装与回滚请阅读 [SOM 维护说明](https://github.com/{{ .Env.GITHUB_REPO_OWNER }}/{{ .Env.GITHUB_REPO_NAME }}/blob/som-custom/SOM-MAINTENANCE.md)。
+容器镜像：`ghcr.io/{{ .Env.GITHUB_REPO_OWNER_LOWER }}/{{ .Env.GITHUB_REPO_NAME }}:{{ .Version }}`。
+'''
     data['snapshot'] = {'version_template': '{{ .Env.RELEASE_VERSION }}'}
     data['dockers'] = []
     data['docker_manifests'] = []

@@ -89,7 +89,11 @@ class ReleaseMatrixTest(unittest.TestCase):
     def test_som_revisions_are_stable_releases(self):
         with patch.dict(os.environ, {'RELEASE_VERSION': '0.2.15-som.2'}):
             release.generate_config(argparse.Namespace(mode='publish', simple=False, output='som.yaml'))
-        self.assertIs(yaml.safe_load(Path('som.yaml').read_text())['release']['prerelease'], False)
+        data = yaml.safe_load(Path('som.yaml').read_text())
+        self.assertIs(data['release']['prerelease'], False)
+        self.assertIn('SOM-MAINTENANCE.md', data['release']['footer'])
+        self.assertNotIn('deploy/install.sh', data['release']['footer'])
+        self.assertIn('/{{ .Env.GITHUB_REPO_NAME }}:', data['release']['footer'])
 
     def test_collect_and_verify_hash_and_source_binding(self):
         args = self.fixture_artifacts()
@@ -175,7 +179,7 @@ class ReleaseMatrixTest(unittest.TestCase):
                 log_path = Path(f'docker-{simple}.log').resolve()
                 env = {**os.environ, 'PATH': str(fake_bin.resolve()) + os.pathsep + os.environ['PATH'],
                        'DOCKER_LOG': str(log_path), 'RUNNER_TEMP': self.temp.name,
-                       'RELEASE_VERSION': '9.8.7', 'RELEASE_SHA': 'a' * 40, 'GITHUB_REPOSITORY': 'ExampleOwner/sub2api',
+                       'RELEASE_VERSION': '9.8.7', 'RELEASE_SHA': 'a' * 40, 'GITHUB_REPOSITORY': 'ExampleOwner/Sub2API-SOM',
                        'DRY_RUN': 'false', 'SIMPLE_RELEASE': str(simple).lower(), 'DOCKERHUB_USERNAME': 'fixturehub'}
                 subprocess.run(['bash', str(ROOT / '.github/release-tools/release-images.sh')], env=env, check=True)
                 log = log_path.read_text()
@@ -184,11 +188,13 @@ class ReleaseMatrixTest(unittest.TestCase):
                 if simple:
                     self.assertNotIn('fixturehub', log)
                     self.assertNotIn('imagetools', log)
-                    self.assertIn('ghcr.io/exampleowner/sub2api:latest', log)
+                    self.assertIn('ghcr.io/exampleowner/sub2api-som:latest', log)
+                    self.assertNotIn('ghcr.io/exampleowner/sub2api:', log)
                 else:
                     self.assertEqual(log.count('imagetools create'), 2)
                     self.assertIn('fixturehub/sub2api:9.8', log)
-                    self.assertIn('ghcr.io/exampleowner/sub2api:9', log)
+                    self.assertIn('ghcr.io/exampleowner/sub2api-som:9', log)
+                    self.assertNotIn('ghcr.io/exampleowner/sub2api:', log)
 
 
 
